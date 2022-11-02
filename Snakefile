@@ -60,7 +60,7 @@ rule sourmash_sig_describe_db:
     output: "outputs/sourmash_sig_describe/gtdb-rs207.genomic-reps.dna.k{ksize}.csv"
     conda: "envs/sourmash.yml"
     shell:'''
-    sourmash sig describe -k {wildcards.ksize} -o {outputs} {input}
+    sourmash sig describe -k {wildcards.ksize} -o {output} {input}
     '''
 
 rule subset_sourmash_db:
@@ -68,14 +68,14 @@ rule subset_sourmash_db:
         sig_describe = "outputs/sourmash_sig_describe/gtdb-rs207.genomic-reps.dna.k{ksize}.csv",
         contams = "inputs/doi10.1016j.tim.2018.11.003-table1.csv",
         gtdb_metadata = "inputs/gtdb/bac120_metadata_r207.tar.gz"
-    output: picklist="outputs/sourmash_sig_describe_subset/picklist.csv"
+    output: picklist="outputs/sourmash_sig_describe_subset/picklist_k{ksize}.csv"
     conda: "envs/tidyverse.yml"
     script: "scripts/snakemake_subset_sourmash_db.R"
 
 rule sourmash_extract_sigs:
     input: 
         db = "inputs/sourmash_databases/gtdb-rs207.genomic-reps.dna.k{ksize}.zip",
-        picklist = "outputs/sourmash_sig_describe_subset/picklist.csv"
+        picklist = "outputs/sourmash_sig_describe_subset/picklist_k{ksize}.csv"
     output: "outputs/sourmash_contam_db/gtdb-rs207.genomic-reps.dna.k{ksize}.contamsubset.zip"
     conda: "envs/sourmash.yml"
     shell:'''
@@ -94,6 +94,7 @@ rule download_genomes:
     output: "inputs/genomes/{genome_acc}.zip"
     shell:'''
     curl -OJX GET "https://api.ncbi.nlm.nih.gov/datasets/v1/genome/accession/{wildcards.genome_acc}/download?include_annotation_type=RNA_FASTA&filename={wildcards.genome_acc}.zip" -H "Accept: application/zip"
+    mv {wildcards.genome_acc}.zip inputs/genomes/{wildcards.genome_acc}.zip
     '''
 
 rule unzip_genomes:
