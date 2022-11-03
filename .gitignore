@@ -1,0 +1,5 @@
+inputs/genomes/
+inputs/gtdb/
+inputs/sourmash_databases/gtdb-rs207.genomic-reps.dna.k21.zip
+outputs/
+.snakemake
