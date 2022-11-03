@@ -7,11 +7,7 @@ SRA_ACC = sra_acc_df['ident'].unique().tolist()
 KSIZE = [21]
 
 rule all:
-    input: 
-        expand("outputs/sourmash_contam_db/gtdb-rs207.genomic-reps.dna.k{ksize}.contamsubset.zip", ksize = KSIZE),
-        expand("outputs/sourmash_sketch/{sra_acc}_sra.sig", sra_acc = SRA_ACC),
-        expand("outputs/sourmash_sketch/{genome_acc}_cds_from_genomic.sig", genome_acc = GENOME_ACC),
-        "outputs/sourmash_sketch/GCF_000819615.1_genomic.sig"
+    input: expand("outputs/sourmash_contam_db/contamdb.dna.k{ksize}.zip", ksize = KSIZE)
 
 #############################################
 ## SUBSET GTDB REPS DATABASE
@@ -91,6 +87,10 @@ rule sourmash_extract_sigs:
 ##################################################################
 
 rule download_genomes:
+    '''
+    This rule downloads genomes that we expect might be common contaminants.
+    Genomes are downloaded as zip files that contain the genome sequence, RNA seq (if available), and CDS from genomic (if available)
+    '''
     output: "inputs/genomes/{genome_acc}.zip"
     shell:'''
     curl -OJX GET "https://api.ncbi.nlm.nih.gov/datasets/v1/genome/accession/{wildcards.genome_acc}/download?include_annotation_type=RNA_FASTA,CDS_FASTA&filename={wildcards.genome_acc}.zip" -H "Accept: application/zip"
@@ -98,6 +98,9 @@ rule download_genomes:
     '''
 
 rule unzip_genomes:
+    '''
+    Extract the sequence that will be sketched
+    '''
     input: "inputs/genomes/{genome_acc}.zip"
     output: "inputs/genomes/{genome_acc}_cds_from_genomic.fna"
     conda: "envs/unzip.yml"
@@ -106,6 +109,13 @@ rule unzip_genomes:
     '''
 
 rule sourmash_sketch_genomes:
+    '''
+    Sketch the sequence.
+    We settled on using the CDS from genomic sequence.
+    Because eukaryotic genomes have a lot of repeat sequences, these might cause false positives when we search against them.
+    Using RNA or CDS from genomic limits these false positives.
+    All genomes were were interested in had CDS from genomic (but not RNA), so we settled on using this sequence.
+    '''
     input: "inputs/genomes/{genome_acc}_cds_from_genomic.fna"
     output: "outputs/sourmash_sketch/{genome_acc}_cds_from_genomic.sig"
     conda: "envs/sourmash.yml"
@@ -120,11 +130,28 @@ rule sourmash_sketch_genomes:
 ##################################################################
     
 rule sourmash_sketch_fastqs:
+    '''
+    some organisms that we expect to be contaminants don't have genomes on GenBank, but they do have raw seq data from genomes or transcriptomes.
+    this rule downloads that data and generates a sketch from it.
+    '''
     output: "outputs/sourmash_sketch/{sra_acc}_sra.sig"
     conda: "envs/sourmash.yml"
     shell:'''
     fastq-dump --disable-multithreading --fasta 0 --skip-technical --readids --read-filter pass --dumpbase --split-spot --clip -Z {wildcards.sra_acc} | 
         sourmash sketch dna -p k=21,k=31,k=51,scaled=1000,abund --name {wildcards.sra_acc} -o {output} -
+    '''
+
+rule sourmash_filter:
+    '''
+    filter out hashes that only have abundance 1. 
+    because these signatures are from raw fastq files, anything with abundance 1 is probably a sequencing error.
+    removing these will decrease the database size and increase search times
+    '''
+    input: "outputs/sourmash_sketch/{sra_acc}_sra.sig"
+    output: "outputs/sourmash_sketch_filtered/{sra_acc}_sra.sig"
+    conda: "envs/sourmash.yml"
+    shell:'''
+    sourmash sig filter --min-abundance 2 -o {output} {input}
     '''
 
 ##################################################################
@@ -138,4 +165,20 @@ rule download_phix:
     conda: "envs/sourmash.yml"
     shell:'''
     curl https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz | zcat | sourmash sketch dna -p k=21,k=31,k=51,scaled=1000,abund -o {output} --name GCF_000819615.1 -
+    '''
+
+##################################################################
+## COMBINE TO CREATE FINAL CONTAM DATABASE
+##################################################################
+
+rule combine_and_create_contam_db:
+    input: 
+        db="outputs/sourmash_contam_db/gtdb-rs207.genomic-reps.dna.k{ksize}.contamsubset.zip",
+        genome_sigs = expand("outputs/sourmash_sketch/{genome_acc}_cds_from_genomic.sig", genome_acc = GENOME_ACC),
+        sra_sigs = expand("outputs/sourmash_sketch_filtered/{sra_acc}_sra.sig", sra_acc = SRA_ACC),
+        phix_sig = "outputs/sourmash_sketch/GCF_000819615.1_genomic.sig",
+    output: "outputs/sourmash_contam_db/contamdb.dna.k{ksize}.zip"
+    conda: "envs/sourmash.yml"
+    shell:'''
+    sourmash sig cat -o {output} {input.db} {input.genome_sigs} {input.sra_sigs} {input.phix_sig}
     '''
