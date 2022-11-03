@@ -100,6 +100,7 @@ rule download_genomes:
 rule unzip_genomes:
     input: "inputs/genomes/{genome_acc}.zip"
     output: "inputs/genomes/{genome_acc}_rna.fna"
+    conda: "envs/unzip.yml"
     shell:'''
     unzip -p {input} ncbi_dataset/data/{wildcards.genome_acc}/rna.fna > {output}
     '''
