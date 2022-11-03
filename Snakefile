@@ -10,7 +10,7 @@ rule all:
     input: 
         expand("outputs/sourmash_contam_db/gtdb-rs207.genomic-reps.dna.k{ksize}.contamsubset.zip", ksize = KSIZE),
         expand("outputs/sourmash_sketch/{sra_acc}_sra.sig", sra_acc = SRA_ACC),
-        expand("outputs/sourmash_sketch/{genome_acc}_rna.sig", genome_acc = GENOME_ACC),
+        expand("outputs/sourmash_sketch/{genome_acc}_cds_from_genomic.sig", genome_acc = GENOME_ACC),
         "outputs/sourmash_sketch/GCF_000819615.1_genomic.sig"
 
 #############################################
@@ -60,14 +60,14 @@ rule sourmash_sig_describe_db:
     output: "outputs/sourmash_sig_describe/gtdb-rs207.genomic-reps.dna.k{ksize}.csv"
     conda: "envs/sourmash.yml"
     shell:'''
-    sourmash sig describe -k {wildcards.ksize} -o {output} {input}
+    sourmash sig describe -k {wildcards.ksize} --csv {output} {input}
     '''
 
 rule subset_sourmash_db:
     input: 
         sig_describe = "outputs/sourmash_sig_describe/gtdb-rs207.genomic-reps.dna.k{ksize}.csv",
         contams = "inputs/doi10.1016j.tim.2018.11.003-table1.csv",
-        gtdb_metadata = "inputs/gtdb/bac120_metadata_r207.tar.gz"
+        gtdb_metadata = "inputs/gtdb/bac120_metadata_r207.tsv"
     output: picklist="outputs/sourmash_sig_describe_subset/picklist_k{ksize}.csv"
     conda: "envs/tidyverse.yml"
     script: "scripts/snakemake_subset_sourmash_db.R"
@@ -93,24 +93,24 @@ rule sourmash_extract_sigs:
 rule download_genomes:
     output: "inputs/genomes/{genome_acc}.zip"
     shell:'''
-    curl -OJX GET "https://api.ncbi.nlm.nih.gov/datasets/v1/genome/accession/{wildcards.genome_acc}/download?include_annotation_type=RNA_FASTA&filename={wildcards.genome_acc}.zip" -H "Accept: application/zip"
+    curl -OJX GET "https://api.ncbi.nlm.nih.gov/datasets/v1/genome/accession/{wildcards.genome_acc}/download?include_annotation_type=RNA_FASTA,CDS_FASTA&filename={wildcards.genome_acc}.zip" -H "Accept: application/zip"
     mv {wildcards.genome_acc}.zip inputs/genomes/{wildcards.genome_acc}.zip
     '''
 
 rule unzip_genomes:
     input: "inputs/genomes/{genome_acc}.zip"
-    output: "inputs/genomes/{genome_acc}_rna.fna"
+    output: "inputs/genomes/{genome_acc}_cds_from_genomic.fna"
     conda: "envs/unzip.yml"
     shell:'''
-    unzip -p {input} ncbi_dataset/data/{wildcards.genome_acc}/rna.fna > {output}
+    unzip -p {input} ncbi_dataset/data/{wildcards.genome_acc}/cds_from_genomic.fna > {output}
     '''
 
 rule sourmash_sketch_genomes:
-    input: "inputs/genomes/{genome_acc}_rna.fna"
-    output: "outputs/sourmash_sketch/{genome_acc}_rna.sig"
+    input: "inputs/genomes/{genome_acc}_cds_from_genomic.fna"
+    output: "outputs/sourmash_sketch/{genome_acc}_cds_from_genomic.sig"
     conda: "envs/sourmash.yml"
     shell:'''
-    sourmash sketch dna -p k=21,k=31,k=51,scaled=1000,abund -o {output} --name {wildcards.genome_acc} -
+    sourmash sketch dna -p k=21,k=31,k=51,scaled=1000,abund -o {output} --name {wildcards.genome_acc} {input}
     '''
 
 ##################################################################
