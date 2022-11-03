@@ -7,7 +7,9 @@ SRA_ACC = sra_acc_df['ident'].unique().tolist()
 KSIZE = [21]
 
 rule all:
-    input: expand("outputs/sourmash_contam_db/contamdb.dna.k{ksize}.zip", ksize = KSIZE)
+    input: 
+        expand("outputs/sourmash_contam_db/contamdb.dna.k{ksize}.zip", ksize = KSIZE),
+        "outputs/sourmash_contam_db/contamdb.taxonomy.csv"
 
 #############################################
 ## SUBSET GTDB REPS DATABASE
@@ -182,3 +184,14 @@ rule combine_and_create_contam_db:
     shell:'''
     sourmash sig cat -o {output} {input.db} {input.genome_sigs} {input.sra_sigs} {input.phix_sig}
     '''
+
+rule create_taxonomy_csv_for_contam_db:
+    input:
+        gtdb_taxonomy = "inputs/sourmash_databases/gtdb-rs207.taxonomy.csv.gz",
+        picklist = "outputs/sourmash_sig_describe_subset/picklist_k21.csv",
+        genome_taxonomy = "inputs/genome_contaminants.csv",
+        sra_taxonomy = "inputs/seq_contaminants.csv"
+    output: taxonomy = "outputs/sourmash_contam_db/contamdb.taxonomy.csv"
+    conda: "envs/tidyverse.yml"
+    script: "scripts/snakemake_make_contam_db_taxonomy.R"
+     
