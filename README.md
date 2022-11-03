@@ -1,5 +1,11 @@
 # Build a sourmash database to detect common sources of contamination in new sequencing data
 
+**Table of Contents**
+* [Accessing the built database](#accessing-the-built-database)
+* [Adding new data to the database](#adding-new-data-to-the-database)
+* [Getting started with this repository](#getting-started-with-this-repository)
+* [Running this repository on AWS](#running-this-repository-on-AWS)
+
 This repository builds a database that can be used with `sourmash gather` to detect contamination in FASTQ files.
 
 Contamination in sequencing data can come from a lot of different sources.
