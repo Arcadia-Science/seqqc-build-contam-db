@@ -5,3 +5,4 @@ inputs/sourmash_databases/gtdb-rs207.taxonomy.csv.gz
 outputs/
 .snakemake
 download_links.txt
+.DS_Store

@@ -2,7 +2,6 @@ library(readr)
 library(dplyr)
 
 genomes <- read_csv(snakemake@input[['genome_taxonomy']])
-sra <- read_csv(snakemake@input[['sra_taxonomy']])
 phix <- data.frame(ident = 'GCF_000819615.1',
                    superkingdom = "d__Virus",
                    phylum = 'p__Phixviricota',
@@ -17,6 +16,6 @@ contams <- read_csv(snakemake@input[['picklist']]) %>%
 gtdb <- read_csv(snakemake@input[['gtdb_taxonomy']]) %>%
   filter(ident %in% contams$ident)
 
-taxonomy <- bind_rows(gtdb, sra, genomes, phix)
+taxonomy <- bind_rows(gtdb, genomes, phix)
 
 write_csv(taxonomy, snakemake@output[['taxonomy']])

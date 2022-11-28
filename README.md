@@ -35,10 +35,9 @@ The database is available in [this OSF repository](https://osf.io/sndz5/).
 
 ## Adding new data to the database 
 
-Three files are used to determine which genomes are included in the final database:
+Two files are used to determine which genomes are included in the final database:
 
 * `inputs/genome_contaminants.csv`: Genome accessions for genomes to include in the database. Accessions are GenBank or RefSeq format (`GCF_*` or `GCA_*`). This Snakefile uses the `CDS_from_genomic.fna` files, so if a genome is missing this file, it cannot be included.
-* `inputs/seq_contaminants.csv`: SRA accessions (`SRR`, `ERR`, or `DRR`) for raw FASTQ files that capture genomes or transcriptomes for species to include in the database that don't have reference genomes in GenBank or RefSeq but have been sequenced.  
 * `inputs/doi10.1016j.tim.2018.11.003-table1.csv`: Genuses of bacteria or archaea that should be included in the database. To keep the final database small, one genome from each species under the specified genus is extracted from the GTDB database.
 
 The files in this repository reflect the genomes that were included in the database posted on OSF.

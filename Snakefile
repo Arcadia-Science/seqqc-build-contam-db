@@ -2,8 +2,6 @@ import pandas as pd
 
 genome_acc_df = pd.read_csv("inputs/genome_contaminants.csv") 
 GENOME_ACC = genome_acc_df['ident'].unique().tolist()
-sra_acc_df = pd.read_csv("inputs/seq_contaminants.csv")
-SRA_ACC = sra_acc_df['ident'].unique().tolist()
 KSIZE = [21]
 
 rule all:
@@ -126,37 +124,6 @@ rule sourmash_sketch_genomes:
     '''
 
 ##################################################################
-## DOWNLOAD & SKETCH SEQUENCE READ ARCHIVE ACCESSIONS
-## covers:
-## - some Arcadia-specific organisms
-##################################################################
-    
-rule sourmash_sketch_fastqs:
-    '''
-    some organisms that we expect to be contaminants don't have genomes on GenBank, but they do have raw seq data from genomes or transcriptomes.
-    this rule downloads that data and generates a sketch from it.
-    '''
-    output: "outputs/sourmash_sketch/{sra_acc}_sra.sig"
-    conda: "envs/sourmash.yml"
-    shell:'''
-    fastq-dump --disable-multithreading --fasta 0 --skip-technical --readids --read-filter pass --dumpbase --split-spot --clip -Z {wildcards.sra_acc} | 
-        sourmash sketch dna -p k=21,k=31,k=51,scaled=1000,abund --name {wildcards.sra_acc} -o {output} -
-    '''
-
-rule sourmash_filter:
-    '''
-    filter out hashes that only have abundance 1. 
-    because these signatures are from raw fastq files, anything with abundance 1 is probably a sequencing error.
-    removing these will decrease the database size and increase search times
-    '''
-    input: "outputs/sourmash_sketch/{sra_acc}_sra.sig"
-    output: "outputs/sourmash_sketch_filtered/{sra_acc}_sra.sig"
-    conda: "envs/sourmash.yml"
-    shell:'''
-    sourmash sig filter --min-abundance 2 -o {output} {input}
-    '''
-
-##################################################################
 ## DOWNLOAD AND SKETCH PHIX
 ## covers:
 ## - phiX illumina spike in
@@ -177,12 +144,11 @@ rule combine_and_create_contam_db:
     input: 
         db="outputs/sourmash_contam_db/gtdb-rs207.genomic-reps.dna.k{ksize}.contamsubset.zip",
         genome_sigs = expand("outputs/sourmash_sketch/{genome_acc}_cds_from_genomic.sig", genome_acc = GENOME_ACC),
-        sra_sigs = expand("outputs/sourmash_sketch_filtered/{sra_acc}_sra.sig", sra_acc = SRA_ACC),
         phix_sig = "outputs/sourmash_sketch/GCF_000819615.1_genomic.sig",
     output: "outputs/sourmash_contam_db/contamdb.dna.k{ksize}.zip"
     conda: "envs/sourmash.yml"
     shell:'''
-    sourmash sig cat -o {output} {input.db} {input.genome_sigs} {input.sra_sigs} {input.phix_sig}
+    sourmash sig cat -o {output} {input.db} {input.genome_sigs} {input.phix_sig}
     '''
 
 rule create_taxonomy_csv_for_contam_db:
@@ -190,8 +156,6 @@ rule create_taxonomy_csv_for_contam_db:
         gtdb_taxonomy = "inputs/sourmash_databases/gtdb-rs207.taxonomy.csv.gz",
         picklist = "outputs/sourmash_sig_describe_subset/picklist_k21.csv",
         genome_taxonomy = "inputs/genome_contaminants.csv",
-        sra_taxonomy = "inputs/seq_contaminants.csv"
     output: taxonomy = "outputs/sourmash_contam_db/contamdb.taxonomy.csv"
     conda: "envs/tidyverse.yml"
     script: "scripts/snakemake_make_contam_db_taxonomy.R"
-     
