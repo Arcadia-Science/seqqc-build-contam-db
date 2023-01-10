@@ -6,3 +6,4 @@ outputs/
 .snakemake
 download_links.txt
 .DS_Store
+notebooks/.ipynb_checkpoints/
