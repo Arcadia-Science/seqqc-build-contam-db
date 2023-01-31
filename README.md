@@ -33,7 +33,7 @@ For the first five, we also outline the identification approach incorporated int
 
 ## Accessing the built database
 
-The database is available in [this OSF repository](https://osf.io/sndz5/).
+The database is available in [this OSF repository](https://osf.io/sndz5/) (DOI: 10.17605/OSF.IO/SNDZ5).
 
 ## Adding new data to the database 
 
