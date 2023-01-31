@@ -10,6 +10,8 @@
 ## Introduction
 
 This repository builds a database that can be used with `sourmash gather` to detect contamination in FASTQ files.
+The database is used as part of the [seqqc pipeline](https://github.com/Arcadia-Science/seqqc) for rapid quality control of new sequencing data.
+See the [seqqc pub here](https://arcadia-research.pubpub.org/pub/resource-seqqc) (DOI: 10.57844/arcadia-cxn6-ch62).
 
 Contamination in sequencing data can come from a lot of different sources.
 Below we outline six common types of contamination. 
